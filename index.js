@@ -24,6 +24,7 @@ async function run() {
         try{
             const categoryCollection=client.db('chakadb').collection('categories');
             const allCategoriesItemsCollection=client.db('chakadb').collection('allCategoriesItems');
+            const bookingCollection=client.db('chakadb').collection('allBookingsItems');
 
             //GET THE ALL CATEGORIES
             app.get('/categories', async(req, res) =>{           
@@ -49,7 +50,12 @@ async function run() {
               
              })
 
-
+            //  POST/INSERT BOOKING ITEMS ITEMS WILL BE BOOKED NY USERS
+             app.post('/bookings', async (req,res)=>{
+              const bookingItem=req.body;
+              const result=await bookingCollection.insertOne(bookingItem)
+              res.send(result)
+             })
         
         }
         finally{
