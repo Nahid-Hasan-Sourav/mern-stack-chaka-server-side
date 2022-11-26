@@ -1,5 +1,6 @@
 
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
@@ -25,6 +26,24 @@ async function run() {
             const categoryCollection=client.db('chakadb').collection('categories');
             const allCategoriesItemsCollection=client.db('chakadb').collection('allCategoriesItems');
             const bookingCollection=client.db('chakadb').collection('allBookingsItems');
+            const userCollection=client.db('chakadb').collection('users');
+
+
+            // sava user info and generate webtoken
+            app.put('/user/:email',async(req,res) => {
+              const email=req.params.email;
+              const user=req.body;
+              const filter={email:email}
+              const options={upsert:true}
+              const updateDoc={
+                $set:user,
+              }
+              const result=userCollection.updateOne(filter,updateDoc,options)
+              console.log("Save Info :",result)
+              const token=jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1d'})
+              res.send({result,token})
+            })
+
 
             //GET THE ALL CATEGORIES
             app.get('/categories', async(req, res) =>{           
