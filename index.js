@@ -38,7 +38,7 @@ async function run() {
               const updateDoc={
                 $set:user,
               }
-              const result=userCollection.updateOne(filter,updateDoc,options)
+              const result=await userCollection.updateOne(filter,updateDoc,options)
               console.log("Save Info :",result)
               const token=jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1d'})
               res.send({result,token})
@@ -75,6 +75,18 @@ async function run() {
               const result=await bookingCollection.insertOne(bookingItem)
               res.send(result)
              })
+
+            //  GET SINGLE USER FOR CHECKING HIS/HER ROLE
+
+            app.get('/user/:email', async (req, res) => {
+              const email=req.params.email
+
+              const query={email : email}
+
+              const user= await userCollection.findOne(query)
+              // console.log(user.role)
+              res.send(user)
+            })
         
         }
         finally{
