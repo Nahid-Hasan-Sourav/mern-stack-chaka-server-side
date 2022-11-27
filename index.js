@@ -70,7 +70,6 @@ async function run() {
              })
 
             // POST SELLER PRODUCT IN allCategoriesItemsCollection
-
             app.post('/allCategoriesItemsCollection', async (req,res)=>{
               const product=req.body;
               const result=await allCategoriesItemsCollection.insertOne(product)
@@ -84,11 +83,17 @@ async function run() {
               res.send(result)
              })
 
-            //GET THE SELLER POSTED PRODUCT BY SELLER EMAIL
-            
+            //GET THE SELLER POSTED PRODUCT BY SELLER EMAIL THAT WILL BE SHOW IN MY ORDERS
+            app.get('/dashboard/seller/my-products/:email', async (req, res) => {
+              const email=req.params.email
+              const query={'userInfo.userEmail':email}
+
+              const sellerProduct= await allCategoriesItemsCollection.find(query).toArray()
+              console.log(sellerProduct)
+              res.send(sellerProduct)
+            })
 
             //  GET SINGLE USER FOR CHECKING HIS/HER ROLE
-
             app.get('/user/:email', async (req, res) => {
               const email=req.params.email
 
