@@ -59,7 +59,7 @@ async function run() {
               console.log("Category Name ",categoryNames);
               
               const query={
-                categoryName:categoryNames
+                categoryId:categoryNames
               }
               console.log("query",query);
               // const cursor= allCategoriesItemsCollection.find(query);
@@ -69,12 +69,23 @@ async function run() {
               
              })
 
+            // POST SELLER PRODUCT IN allCategoriesItemsCollection
+
+            app.post('/allCategoriesItemsCollection', async (req,res)=>{
+              const product=req.body;
+              const result=await allCategoriesItemsCollection.insertOne(product)
+              res.send(result)
+             })
+
             //  POST/INSERT BOOKING ITEMS ITEMS WILL BE BOOKED NY USERS
              app.post('/bookings', async (req,res)=>{
               const bookingItem=req.body;
               const result=await bookingCollection.insertOne(bookingItem)
               res.send(result)
              })
+
+            //GET THE SELLER POSTED PRODUCT BY SELLER EMAIL
+            
 
             //  GET SINGLE USER FOR CHECKING HIS/HER ROLE
 
