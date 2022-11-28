@@ -21,6 +21,25 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 // console.log(uri)
 
 
+    // jwt 
+    function verifyJWT(req, res, next) {
+      const authHeader = req.headers.authorization;
+      if(!authHeader){
+        return res.status(401).send({message:'unauthorized access'});
+
+      }
+
+      const token = authHeader.split(' ')[1]
+      jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,function(err,decoded){
+        if(err){
+          return res.status(403).send({message:'Forbidden access'})
+        }
+        console.log("decoded: ",decoded)
+        req.decoded = decoded
+        next()
+      })
+    }
+
 async function run() {
         try{
             const categoryCollection=client.db('chakadb').collection('categories');
@@ -28,6 +47,7 @@ async function run() {
             const bookingCollection=client.db('chakadb').collection('allBookingsItems');
             const userCollection=client.db('chakadb').collection('users');
             const advertiseProductCollection=client.db('chakadb').collection('advertiseProduct');
+            const wishlistCollection=client.db('chakadb').collection('wishlist');
 
 
             // sava user info and generate webtoken
@@ -42,6 +62,7 @@ async function run() {
               const result=await userCollection.updateOne(filter,updateDoc,options)
               console.log("Save Info :",result)
               const token=jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1d'})
+              console.log("Token :",token)
               res.send({result,token})
             })
 
@@ -71,14 +92,14 @@ async function run() {
              })
 
             // POST SELLER PRODUCT IN allCategoriesItemsCollection
-            app.post('/allCategoriesItemsCollection', async (req,res)=>{
+            app.post('/allCategoriesItemsCollection', verifyJWT,async (req,res)=>{
               const product=req.body;
               const result=await allCategoriesItemsCollection.insertOne(product)
               res.send(result)
              })
 
             //  POST/INSERT BOOKING ITEMS ITEMS WILL BE BOOKED NY USERS
-             app.post('/bookings', async (req,res)=>{
+             app.post('/bookings',verifyJWT, async (req,res)=>{
               const bookingItem=req.body;
               const result=await bookingCollection.insertOne(bookingItem)
               res.send(result)
@@ -87,6 +108,7 @@ async function run() {
             //GET THE SELLER POSTED PRODUCT BY SELLER EMAIL THAT WILL BE SHOW IN MY ORDERS
             app.get('/dashboard/seller/my-products/:email', async (req, res) => {
               const email=req.params.email
+              console.log("My orders",email)
               const query={'userInfo.userEmail':email}
 
               const sellerProduct= await allCategoriesItemsCollection.find(query).toArray()
@@ -94,7 +116,7 @@ async function run() {
               res.send(sellerProduct)
             })
             // SELLER PRODUCTS DELETE API
-            app.delete('/dashboard/seller/my-products/deletes/:id', async (req, res) => {
+            app.delete('/dashboard/seller/my-products/deletes/:id', verifyJWT,async (req, res) => {
               const id = req.params.id;
               console.log('trying to delete', id);
               const query = { _id: ObjectId(id) }
@@ -104,7 +126,7 @@ async function run() {
           });
 
             //  GET SINGLE USER FOR CHECKING HIS/HER ROLE
-            app.get('/user/:email', async (req, res) => {
+            app.get('/user/:email',verifyJWT, async (req, res) => {
               const email=req.params.email
 
               const query={email : email}
@@ -115,11 +137,20 @@ async function run() {
             })
 
             //THIS API WILL ADDED PRODUCT IN ADVERTISE COLLECTION
-            app.post('/advertiseProductCollection', async (req,res)=>{
+            app.post('/advertiseProductCollection',verifyJWT, async (req,res)=>{
               const product=req.body;
               delete product._id
               console.log("Product: " , product)
               const result=await advertiseProductCollection.insertOne(product)
+              res.send(result)
+             })
+
+            //  ADDED IN WISHLIT
+            app.put('/wish-list',async (req,res)=>{
+              const wishlist=req.body;
+              // delete wishlist._id
+              console.log("wishlist: " , wishlist)
+              const result=await wishlistCollection.insertOne(wishlist)
               res.send(result)
              })
 
@@ -134,7 +165,7 @@ async function run() {
 
 
           // GET ALL SELLERS
-          app.get('/all-seller', async (req, res) => {
+          app.get('/all-seller', verifyJWT,async (req, res) => {
             const email=req.params.email
             const query={role:'seller'}
             const user= await userCollection.find(query).toArray()
@@ -143,7 +174,7 @@ async function run() {
           })
 
           // added verify seller status
-          app.put('/users/seller/:id', async (req, res) => {       
+          app.put('/users/seller/:id',verifyJWT, async (req, res) => {       
             const id = req.params.id;
             const filter = { _id: ObjectId(id) }
             const options = { upsert: true };
@@ -158,7 +189,7 @@ async function run() {
         })
 
         // this api for admin can delete seller
-        app.delete('/users/seller/deletes/:id', async (req, res) => {
+        app.delete('/users/seller/deletes/:id', verifyJWT,async (req, res) => {
           const id = req.params.id;
           // console.log('trying to delete', id);
           const query = { _id: ObjectId(id) }
@@ -168,12 +199,21 @@ async function run() {
       });
      
       // GET ALL ORDERS BY SPECIFIC BUYERS
-      app.get('/buyers/my-products/:email', async (req, res) => {
+      app.get('/buyers/my-products/:email',verifyJWT, async (req, res) => {
         const email=req.params.email
 
         const query={email : email}
 
         const user= await bookingCollection.find(query).toArray();
+        // console.log(user.role)
+        res.send(user)
+      })
+      app.get('/dashboard/wishlist/:email',async (req, res) => {
+        const email=req.params.email
+
+        const query={email : email}
+
+        const user= await wishlistCollection.find(query).toArray();
         // console.log(user.role)
         res.send(user)
       })
