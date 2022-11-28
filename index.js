@@ -50,7 +50,7 @@ async function run() {
             app.get('/categories', async(req, res) =>{           
               const query ={}
               const categories = await  categoryCollection.find(query).toArray();
-              console.log(categories);
+              // console.log(categories);
               res.send(categories);
             })
 
@@ -65,7 +65,7 @@ async function run() {
               console.log("query",query);
               // const cursor= allCategoriesItemsCollection.find(query);
               const items= await allCategoriesItemsCollection.find(query).toArray();
-              console.log("Services",items);
+              // console.log("Services",items);
               res.send(items);
               
              })
@@ -90,7 +90,7 @@ async function run() {
               const query={'userInfo.userEmail':email}
 
               const sellerProduct= await allCategoriesItemsCollection.find(query).toArray()
-              console.log(sellerProduct)
+              // console.log(sellerProduct)
               res.send(sellerProduct)
             })
             // SELLER PRODUCTS DELETE API
@@ -99,7 +99,7 @@ async function run() {
               console.log('trying to delete', id);
               const query = { _id: ObjectId(id) }
               const result = await allCategoriesItemsCollection.deleteOne(query);
-              console.log(result);
+              // console.log(result);
               res.send(result);
           });
 
@@ -117,9 +117,18 @@ async function run() {
             //THIS API WILL ADDED PRODUCT IN ADVERTISE COLLECTION
             app.put('/advertiseProductCollection', async (req,res)=>{
               const product=req.body;
+              console.log("Product: " , product)
               const result=await advertiseProductCollection.insertOne(product)
               res.send(result)
              })
+
+             //GET THE ALL ADVERTISE product
+            app.get('/advertiseProduct', async(req, res) =>{           
+              const query ={}
+              const categories = await  advertiseProductCollection.find(query).toArray();
+              console.log(categories);
+              res.send(categories);
+            })
         }
         finally{
 
