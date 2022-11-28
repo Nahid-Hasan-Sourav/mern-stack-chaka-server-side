@@ -115,20 +115,33 @@ async function run() {
             })
 
             //THIS API WILL ADDED PRODUCT IN ADVERTISE COLLECTION
-            app.put('/advertiseProductCollection', async (req,res)=>{
+            app.post('/advertiseProductCollection', async (req,res)=>{
               const product=req.body;
+              delete product._id
               console.log("Product: " , product)
               const result=await advertiseProductCollection.insertOne(product)
               res.send(result)
              })
 
              //GET THE ALL ADVERTISE product
-            app.get('/advertiseProduct', async(req, res) =>{           
+            app.get('/advertiseProduct', async(req, res) =>{ 
+
               const query ={}
               const categories = await  advertiseProductCollection.find(query).toArray();
               console.log(categories);
               res.send(categories);
             })
+
+
+          // GET ALL SELLERS
+          app.get('/all-seller', async (req, res) => {
+            const email=req.params.email
+            const query={role:'seller'}
+            const user= await userCollection.find(query).toArray()
+            console.log(user)
+            res.send(user)
+          })
+
         }
         finally{
 
