@@ -2,7 +2,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const port = process.env.PORT || 5000;
 
@@ -27,6 +27,7 @@ async function run() {
             const allCategoriesItemsCollection=client.db('chakadb').collection('allCategoriesItems');
             const bookingCollection=client.db('chakadb').collection('allBookingsItems');
             const userCollection=client.db('chakadb').collection('users');
+            const advertiseProductCollection=client.db('chakadb').collection('advertiseProduct');
 
 
             // sava user info and generate webtoken
@@ -92,6 +93,15 @@ async function run() {
               console.log(sellerProduct)
               res.send(sellerProduct)
             })
+            // SELLER PRODUCTS DELETE API
+            app.delete('/dashboard/seller/my-products/deletes/:id', async (req, res) => {
+              const id = req.params.id;
+              console.log('trying to delete', id);
+              const query = { _id: ObjectId(id) }
+              const result = await allCategoriesItemsCollection.deleteOne(query);
+              console.log(result);
+              res.send(result);
+          });
 
             //  GET SINGLE USER FOR CHECKING HIS/HER ROLE
             app.get('/user/:email', async (req, res) => {
@@ -103,7 +113,13 @@ async function run() {
               // console.log(user.role)
               res.send(user)
             })
-        
+
+            //THIS API WILL ADDED PRODUCT IN ADVERTISE COLLECTION
+            app.put('/advertiseProductCollection', async (req,res)=>{
+              const product=req.body;
+              const result=await advertiseProductCollection.insertOne(product)
+              res.send(result)
+             })
         }
         finally{
 
