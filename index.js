@@ -166,6 +166,18 @@ async function run() {
           // console.log(result);
           res.send(result);
       });
+     
+      // GET ALL ORDERS BY SPECIFIC BUYERS
+      app.get('/buyers/my-products/:email', async (req, res) => {
+        const email=req.params.email
+
+        const query={email : email}
+
+        const user= await bookingCollection.find(query).toArray();
+        // console.log(user.role)
+        res.send(user)
+      })
+
 
     }
 
