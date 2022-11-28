@@ -142,7 +142,24 @@ async function run() {
             res.send(user)
           })
 
-        }
+          // added verify seller status
+          app.put('/users/seller/:id', async (req, res) => {       
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) }
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                  sellerStatus:'verified'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc, options);
+            console.log("verified :",result)
+            res.send(result);
+        })
+
+    }
+
+        
         finally{
 
         }
