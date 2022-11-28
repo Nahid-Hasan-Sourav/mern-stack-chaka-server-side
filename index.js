@@ -157,6 +157,16 @@ async function run() {
             res.send(result);
         })
 
+        // this api for admin can delete seller
+        app.delete('/users/seller/deletes/:id', async (req, res) => {
+          const id = req.params.id;
+          // console.log('trying to delete', id);
+          const query = { _id: ObjectId(id) }
+          const result = await userCollection.deleteOne(query);
+          // console.log(result);
+          res.send(result);
+      });
+
     }
 
         
