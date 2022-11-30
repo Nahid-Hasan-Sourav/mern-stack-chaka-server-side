@@ -12,6 +12,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// STRIPE
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 
 
@@ -48,7 +50,21 @@ async function run() {
             const userCollection=client.db('chakadb').collection('users');
             const advertiseProductCollection=client.db('chakadb').collection('advertiseProduct');
             const wishlistCollection=client.db('chakadb').collection('wishlist');
+            const paymentsCollection=client.db('chakadb').collection('payments');
+            const test=client.db('chakadb').collection('test');
 
+
+            const verifyAdmin = async (req,res,next) => {
+              const decodedEmail=req.decoded.email
+              const query ={email:decodedEmail}
+              const user= await userCollection.findOne(query)
+              if(user?.role !== 'admin')
+              {
+                return res.status(403).send({message:"Forbidden access"})
+              }
+              console.log("Working")
+              next();
+            }
 
             // sava user info and generate webtoken
             app.put('/user/:email',async(req,res) => {
@@ -99,14 +115,41 @@ async function run() {
              })
 
             //  POST/INSERT BOOKING ITEMS ITEMS WILL BE BOOKED NY USERS
-             app.post('/bookings',verifyJWT, async (req,res)=>{
-              const bookingItem=req.body;
-              const result=await bookingCollection.insertOne(bookingItem)
-              res.send(result)
+            //  app.put('/bookings', async (req,res)=>{
+            //   const bookingItem=req.body;
+            //   const result=await bookingCollection.insertOne(bookingItem)
+            //   console.log(result);
+            //   res.send(result)
+            //  })
+            app.post('/bookings',async (req,res)=>{
+              const booking=req.body;
+              // delete wishlist._id
+              
+             
+              const query ={email:booking.email,itemName:booking.itemName}
+              const categories = await  bookingCollection.findOne(query);
+              if(!categories){
+                const result=await  bookingCollection.insertOne(booking)
+                console.log("booking: " ,result)
+                res.send(result)
+              }
+              else{
+                res.send({acknowledged:false})
+              }
+              
+             })
+            //  GET A BOOKING BY ID FOR PAYMENT PAGES
+            app.get('/bookings/:id',async (req,res)=>{
+              const id=req.params.id
+             
+              const query={_id:ObjectId(id)}
+              const booking= await bookingCollection.findOne(query)
+              // console.log(booking)
+              res.send(booking)
              })
 
             //GET THE SELLER POSTED PRODUCT BY SELLER EMAIL THAT WILL BE SHOW IN MY ORDERS
-            app.get('/dashboard/seller/my-products/:email', async (req, res) => {
+            app.get('/dashboard/seller/my-products/:email',verifyJWT, async (req, res) => {
               const email=req.params.email
               console.log("My orders",email)
               const query={'userInfo.userEmail':email}
@@ -136,42 +179,100 @@ async function run() {
               res.send(user)
             })
 
+            
+            // app.post('/advertiseProductCollection',verifyJWT, async (req,res)=>{
+            //   const product=req.body;
+            //   delete product._id
+            //   console.log("Product: " , product)
+            //   const result=await advertiseProductCollection.insertOne(product)
+            //   res.send(result)
+            //  })
+
             //THIS API WILL ADDED PRODUCT IN ADVERTISE COLLECTION
-            app.post('/advertiseProductCollection',verifyJWT, async (req,res)=>{
-              const product=req.body;
-              delete product._id
-              console.log("Product: " , product)
-              const result=await advertiseProductCollection.insertOne(product)
-              res.send(result)
+             app.post('/advertiseProductCollection',verifyJWT,async (req,res)=>{
+              const booking=req.body;
+              // delete wishlist._id
+              
+              
+              const query ={_id:booking._id}
+              const categories = await  advertiseProductCollection.findOne(query);
+              if(!categories ){
+                booking['sellStatus']='available'
+                const result=await  advertiseProductCollection.insertOne(booking)
+                console.log("booking: " ,result)
+                res.send(result)
+              }
+              else{
+                res.send({acknowledged:false})
+              }
+              
              })
 
-            //  ADDED IN WISHLIT
-            app.put('/wish-list',async (req,res)=>{
+            // //  ADDED IN WISHLIT
+            // app.put('/wish-list',async (req,res)=>{
+            //   const wishlist=req.body;
+            //   // delete wishlist._id
+            //   console.log("wishlist: " , wishlist)
+            //   const result=await wishlistCollection.insertOne(wishlist)
+            //   console.log("wishlist result: " , wishlist)
+            //   res.send(result)
+            //  })
+
+             //  ADDED IN WISHLIT
+             app.post('/wish-list',async (req,res)=>{
               const wishlist=req.body;
               // delete wishlist._id
               console.log("wishlist: " , wishlist)
-              const result=await wishlistCollection.insertOne(wishlist)
-              res.send(result)
+            
+              const query ={email:wishlist.email,productName:wishlist.productName}
+              const categories = await  wishlistCollection.findOne(query);
+              if(!categories){
+                const result=await wishlistCollection.insertOne(wishlist)
+                console.log("wishlist: " ,result)
+                res.send(result)
+              }
+              else{
+                res.send({acknowledged:false})
+              }
+              
              })
 
              //GET THE ALL ADVERTISE product
-            app.get('/advertiseProduct', async(req, res) =>{ 
+            app.get('/advertiseProduct',async(req, res) =>{ 
 
-              const query ={}
+              const query ={sellStatus:'available'}
+             
               const categories = await  advertiseProductCollection.find(query).toArray();
-              console.log(categories);
+              console.log("advertise",categories);
               res.send(categories);
             })
 
 
           // GET ALL SELLERS
-          app.get('/all-seller', verifyJWT,async (req, res) => {
+          app.get('/all-seller', verifyJWT,verifyAdmin,async (req, res) => {
             const email=req.params.email
             const query={role:'seller'}
             const user= await userCollection.find(query).toArray()
             console.log(user)
             res.send(user)
           })
+          // GET ALL SELLERS
+          app.get('/all-buyers', verifyJWT,verifyAdmin,async (req, res) => {
+            const email=req.params.email
+            const query={role:'user'}
+            const user= await userCollection.find(query).toArray()
+            console.log(user)
+            res.send(user)
+          })
+
+          app.delete('/users/buyers/delete/:id',verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            console.log('trying to delete', id);
+            const query = { _id: ObjectId(id) }
+            const result = await userCollection.deleteOne(query);
+            // console.log(result);
+            res.send(result);
+        });
 
           // added verify seller status
           app.put('/users/seller/:id',verifyJWT, async (req, res) => {       
@@ -208,7 +309,8 @@ async function run() {
         // console.log(user.role)
         res.send(user)
       })
-      app.get('/dashboard/wishlist/:email',async (req, res) => {
+      // GET ALL WISHLIST PRODUCT
+      app.get('/dashboard/wishlist/:email',verifyJWT,async (req, res) => {
         const email=req.params.email
 
         const query={email : email}
@@ -217,6 +319,88 @@ async function run() {
         // console.log(user.role)
         res.send(user)
       })
+
+              //  PAYMENT
+              app.post('/create-payment-intent', async (req, res) => {
+                const booking = req.body;
+                const price =Number(booking.price);
+                let amount = price * 100;
+                console.log(amount)
+                if(amount===NaN){
+                  amount=0
+                }
+
+                const paymentIntent = await stripe.paymentIntents.create({
+                    currency: 'usd',
+                    amount: amount,
+                    "payment_method_types": [
+                        "card"
+                    ]
+                });
+                res.send({
+                    clientSecret: paymentIntent.client_secret,
+                });
+            });
+
+            // store payment info and added a property on allCategoryItem and advertisement collection
+              app.post('/payments', verifyJWT,async (req, res) =>{
+                const payment = req.body;
+                const result = await paymentsCollection.insertOne(payment);
+                const id = payment.bookingId
+                const filter = {itemName:payment.itemName,email:payment.email}
+                const options={upsert:true}
+                const updatedDoc = {
+                    $set: {
+                        paid: true,
+                        transactionId: payment.transactionId
+                    }
+                }
+                const updatedResult = await bookingCollection.updateOne(filter,updatedDoc,options)
+                console.log("Payment result updated",result)
+
+                const filtertwo = {name:payment.itemName}
+                const optionsTwo={upsert:true}
+                const updatedDocTwo = {
+                    $set: {
+                        paid: true,
+                        sellStatus:'sold',                       
+                        transactionId: payment.transactionId
+                    }
+                }
+                const updatedResultTwo = await allCategoriesItemsCollection.updateOne(filtertwo,updatedDocTwo,optionsTwo)
+                console.log("Payment result updated",result)
+
+                // const filterThree = {name:payment.itemName}
+                // const optionsThree={upsert:true}
+                // const updatedDocThree = {
+                //     $set: {
+                //         paid: true,
+                //         sellStatus:'sold',                       
+                //         transactionId: payment.transactionId
+                //     }
+                // }
+                // const updatedResultThree= await advertiseProductCollection.updateOne(filterThree,optionsThree,updatedDocThree)
+                // console.log("Payment result updated",updatedResultThree)
+
+                res.send(result);
+            })
+            app.post('/updateAdvertise', verifyJWT,async (req, res) =>{
+              const payment = req.body;
+              const filter = {name:payment.itemName}
+                const options={upsert:true}
+                const updatedDoc = {
+                    $set: {
+                        paid: true,
+                        sellStatus:'sold',    
+                        transactionId: payment.transactionId
+                    }
+                }
+                const updatedResult = await advertiseProductCollection.updateOne(filter,updatedDoc,options)
+                console.log("Payment result updated",updatedResult)
+                res.send(updatedResult)
+
+            })
+
 
 
     }
